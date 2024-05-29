@@ -2,15 +2,4 @@ name: GeoJSONToHeightMap
 channels:
   - defaults
 dependencies:
-  - python=3.12
-  - conda==24.5.0
-  - setuptools
-  - pip
-  - wheel
-  - conda-content-trust
-  - conda-libmamba-solver
-  - menuinst
-  - console_shortcut_miniconda
-  - powershell_shortcut_miniconda
-  - anaconda-anon-usage
   - geopandas
