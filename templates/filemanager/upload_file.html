@@ -1,0 +1,16 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Upload File{% endblock title %}
+
+{% block breadcrumb %}
+<h2>Загрузить файл geojson</h2>
+{% endblock breadcrumb %}
+
+{% block content %}
+<form method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit">Загрузить файл</button>
+</form>
+{% endblock content %}

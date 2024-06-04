@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+    {% load static %}
+    <head>
+        <meta name="description" content="Event Dashboard" />
+        <!-- Twitter meta-->
+        <meta property="twitter:card" content="summary_large_image" />
+        <meta property="twitter:site" content="@sajib1066" />
+        <meta property="twitter:creator" content="@sajib1066" />
+        <!-- Open Graph Meta-->
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="Vali Admin" />
+        <meta property="og:title" content="Vali - Free Bootstrap 4 admin theme" />
+        <meta property="og:url" content="https://sajib1066.github.io/" />
+        <meta property="og:image" content="https://sajib1066.github.io/images/me.jpg" />
+        <meta property="og:description" content="Event Dashboard" />
+        <title>{% block title %}{% endblock title  %}</title>
+        <meta charset="utf-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <!-- Main CSS-->
+        <link rel="stylesheet" type="text/css" href="{% static 'css/main.css' %}" />
+        <link rel="stylesheet" type="text/css" href="{% static 'css/sidebar-style.css' %}" />
+        <!-- Font-icon css-->
+        <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" />
+        {% block extracss %}
+        {% endblock extracss %}
+    </head>
+    <body class="app sidebar-mini">
+
+        <!-- Navbar-->
+        <header class="app-header">
+            <!-- Sidebar toggle button-->
+            <a class="app-sidebar__toggle" href="#" data-toggle="sidebar" aria-label="Hide Sidebar"></a>
+            <!-- Navbar Right Menu-->
+            <ul class="app-nav">
+                <li class="app-search">
+                    <input class="app-search__input" type="search" placeholder="Search" />
+                    <button class="app-search__button"><i class="fa fa-search"></i></button>
+                </li>
+                         
+            </ul>
+        </header>
+        <!-- Sidebar menu-->
+        <div class="app-sidebar__overlay" data-toggle="sidebar"></div>
+        <aside class="app-sidebar">
+            <div class="app-sidebar__user">
+                <a class="app-sidebar__item" href="#" data-toggle="dropdown">
+                    <img src="{{ user.image.url }}" alt="{{ user.first_name }} {{ user.last_name }}" class="user-image">
+                    <span class="app-menu__label user-name">{{ user.first_name }} {{ user.last_name }}</span>
+                </a>
+                <ul class="dropdown-menu settings-menu dropdown-menu-right">
+                    <li><a class="dropdown-item" href="#">Настройки</a></li>
+                    <li><a class="dropdown-item" href="{% url 'filemanager:profile' %}">Профиль</a></li>
+                    <li><a class="dropdown-item" href="#">Выход</a></li>
+                </ul>
+            </div>
+            <ul class="app-menu">
+                <li>
+                    <a class="app-menu__item" href="{% url 'filemanager:dashboard' %}">
+                        <i class="app-menu__icon fa fa-home"></i>
+                        <span class="app-menu__label">Главная</span>
+                    </a>
+                </li>
+                <li>
+                    <a class="app-menu__item" href="{% url 'filemanager:file_list' %}">
+                        <i class="app-menu__icon fa fa-file"></i>
+                        <span class="app-menu__label">Файлы</span>
+                    </a>
+                </li>
+                <li>
+                    <a class="app-menu__item" href="{% url 'filemanager:file_upload' %}">
+                        <i class="app-menu__icon fa fa-upload"></i>
+                        <span class="app-menu__label">Загрузить файл</span>
+                    </a>
+                </li>
+            </ul>
+        </aside>
+        <main class="app-content">
+            <div class="app-title">
+                {% block breadcrumb %}
+                {% endblock breadcrumb %}
+            </div>
+            {% block content %}
+            {% endblock content %}
+        </main>
+        <!-- Essential javascripts for application to work-->
+        {% include 'base/js.html' %}
+        {% block extrascripts %}
+        {% endblock extrascripts %}
+    </body>
+</html>

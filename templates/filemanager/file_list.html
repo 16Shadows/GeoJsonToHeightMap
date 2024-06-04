@@ -1,0 +1,18 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}File List{% endblock title %}
+
+{% block breadcrumb %}
+<h2>Ваши загруженные файлы</h2>
+{% endblock breadcrumb %}
+
+{% block content %}
+<ul>
+  {% for file in files %}
+    <li>
+      <a href="{% url 'filemanager:map_view' file.id %}">{{ file.file.name }}</a> ({{ file.uploaded_at }})
+    </li>
+  {% endfor %}
+</ul>
+{% endblock content %}
