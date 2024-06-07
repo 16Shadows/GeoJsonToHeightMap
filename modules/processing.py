@@ -1,12 +1,11 @@
 import geopandas
 import pyproj
-import numpy as np
 import shapely
-from typing import Tuple, cast, Final
+from typing import cast, Final
 
 MSK_48_CRS : Final[str] = '+proj=tmerc +lat_0=0 +lon_0=38.48333333333 +k=1 +x_0=1250000 +y_0=-5412900.566 +ellps=krass +towgs84=23.57,-140.95,-79.8,0,0.35,0.79,-0.22 +units=m +no_defs'
 
-def load_geojson(path: str, left_bottom: Tuple[float, float] | None = None, right_top: Tuple[float, float] | None = None) -> geopandas.GeoDataFrame:
+def load_geojson(path: str, left_bottom: tuple[float, float] | None = None, right_top: tuple[float, float] | None = None) -> geopandas.GeoDataFrame:
     if (left_bottom and right_top):
         return geopandas.read_file(path, bbox=(*left_bottom, *right_top))
     else:
@@ -29,10 +28,10 @@ def validate_data(df: geopandas.GeoDataFrame):
 def project_geometry(df: geopandas.GeoDataFrame, crs: str) -> geopandas.GeoDataFrame:
     return cast(geopandas.GeoDataFrame, df.to_crs(crs))
 
-def wgs84_point_to_crs(point: Tuple[float, float], crs: str) -> Tuple[float, float]:
-    return cast(Tuple[float, float], pyproj.Transformer.from_crs('EPSG:4326', crs, always_xy=True,).transform(*point, errcheck=True))
+def wgs84_point_to_crs(point: tuple[float, float], crs: str) -> tuple[float, float]:
+    return cast(tuple[float, float], pyproj.Transformer.from_crs('EPSG:4326', crs, always_xy=True,).transform(*point, errcheck=True))
 
-def generate_sampling_grid(leftTop: Tuple[int, int], stepSize: int, columnCount: int, rowCount: int) -> geopandas.GeoDataFrame:
+def generate_sampling_grid(leftTop: tuple[int, int], stepSize: int, columnCount: int, rowCount: int) -> geopandas.GeoDataFrame:
     if columnCount < 1:
         raise ValueError('columnCount should be greater than 0')
     elif rowCount < 1:
