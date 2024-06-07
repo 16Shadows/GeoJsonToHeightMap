@@ -5,77 +5,65 @@ import matplotlib.pyplot as plt
 import processing as prc
 
 # Функция для преобразования контуров в полигоны
-
 def contours_to_polygons(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
-    polygons = []  # Список для хранения полигонов
-    
-    # Сортировка уровней высоты по возрастанию
-    elevations = sorted(df['elevation'].unique())
-    
-    for elevation in elevations:
-        group = df[df['elevation'] == elevation]
-        exterior_coords = []  # Координаты внешних контуров
-        interior_coords = []  # Координаты внутренних контуров
-        
-        # Итерация по геометрии в каждой группе
-        for geom in group.geometry:
-            if isinstance(geom, LineString) and geom.is_ring:
-                exterior_coords.append(geom.coords)
-            elif isinstance(geom, Polygon):
-                exterior_coords.append(geom.exterior.coords)
-                for interior in geom.interiors:
-                    interior_coords.append(interior.coords)
-        
-        if exterior_coords:
-            exterior_polygons = [Polygon(coords) for coords in exterior_coords]
-            unioned_polygon = unary_union(exterior_polygons)
-            
-            if isinstance(unioned_polygon, Polygon):
-                polygons.append({'elevation': elevation, 'geometry': unioned_polygon})
-            elif isinstance(unioned_polygon, MultiPolygon):
-                polygons.append({'elevation': elevation, 'geometry': unioned_polygon})
+    # Сортировка высот по убыванию
+    elevations = sorted(df['elevation'].unique(), reverse=True)
 
-    # Создание GeoDataFrame из списка полигонов
-    polygons_df = gpd.GeoDataFrame(polygons)
-    
-    # Обработка вырезания внутренних контуров
+    polygons = []
+    # Итерация по каждой высоте
+    for elevation in elevations:
+        # Фильтрация данных по текущей высоте
+        group = df[df['elevation'] == elevation]
+
+        # Извлечение координат внешних и внутренних контуров
+        exterior_coords = group.geometry[group.geometry.apply(lambda geom: isinstance(geom, LineString) and geom.is_ring)].apply(lambda line: line.coords)
+        interior_coords = group.geometry[group.geometry.apply(lambda geom: isinstance(geom, Polygon))].apply(lambda poly: [interior.coords for interior in poly.interiors]).explode(index_parts=False)
+
+        # Создание внешних полигонов
+        exterior_polygons = list(map(Polygon, exterior_coords))
+        unioned_polygon = unary_union(exterior_polygons)
+
+        # Добавление объединенного полигона в список
+        if isinstance(unioned_polygon, Polygon):
+            polygons.append({'elevation': elevation, 'geometry': unioned_polygon})
+        elif isinstance(unioned_polygon, MultiPolygon):
+            polygons.extend([{'elevation': elevation, 'geometry': poly} for poly in unioned_polygon.geoms])
+
+    # Создание GeoDataFrame из полигонов
+    polygons_df = gpd.GeoDataFrame(polygons, crs=df.crs)
+
+    # Обработка внутренних полигонов
     final_polygons = []
     for i, poly in polygons_df.iterrows():
         current_polygon = poly['geometry']
-        for j, inner_poly in polygons_df.iterrows():
-            if inner_poly['elevation'] > poly['elevation']:
-                if isinstance(inner_poly['geometry'], Polygon):
-                    if isinstance(current_polygon, Polygon) and current_polygon.contains(inner_poly['geometry']):
-                        current_polygon = current_polygon.difference(inner_poly['geometry'])
-                    elif isinstance(current_polygon, MultiPolygon):
-                        new_geoms = []
-                        for geom in current_polygon.geoms:
-                            if geom.contains(inner_poly['geometry']):
-                                geom = geom.difference(inner_poly['geometry'])
-                            new_geoms.append(geom)
-                        current_polygon = MultiPolygon(new_geoms)
-                elif isinstance(inner_poly['geometry'], MultiPolygon):
-                    for sub_poly in inner_poly['geometry'].geoms:
-                        if isinstance(current_polygon, Polygon) and current_polygon.contains(sub_poly):
+
+        # Поиск и вычитание внутренних полигонов
+        for j, inner_poly in polygons_df[polygons_df['elevation'] < poly['elevation']].iterrows():
+            inner_geom = inner_poly['geometry']
+            
+            # Проверка типов текущего и внутреннего полигонов
+            if isinstance(inner_geom, Polygon) and isinstance(current_polygon, Polygon) and current_polygon.contains(inner_geom):
+                current_polygon = current_polygon.difference(inner_geom)
+            elif isinstance(inner_geom, MultiPolygon):
+                # Проверка типов текущего полигона и вычитаемого полигона
+                if isinstance(current_polygon, Polygon):
+                    # Если текущий полигон - Polygon, итерация по всем внутренним полигонам в MultiPolygon
+                    for sub_poly in inner_geom.geoms:
+                        # Проверка содержания внутреннего полигона в текущем полигоне
+                        if current_polygon.contains(sub_poly):
                             current_polygon = current_polygon.difference(sub_poly)
-                        elif isinstance(current_polygon, MultiPolygon):
-                            new_geoms = []
-                            for geom in current_polygon.geoms:
-                                if geom.contains(sub_poly):
-                                    geom = geom.difference(sub_poly)
-                                new_geoms.append(geom)
-                            current_polygon = MultiPolygon(new_geoms)
+                elif isinstance(current_polygon, MultiPolygon):
+                    # Если текущий полигон - MultiPolygon, итерация по всем его составляющим
+                    new_geoms = [geom.difference(inner_geom) if geom.intersects(inner_geom) else geom for geom in current_polygon.geoms]
+                    current_polygon = MultiPolygon(new_geoms)
+
         final_polygons.append({'elevation': poly['elevation'], 'geometry': current_polygon})
 
-    
-    # Объединение полигонов на одной высоте в MultiPolygon
-    final_df = gpd.GeoDataFrame(final_polygons)
-    grouped_polygons = []
-    for elevation, group in final_df.groupby('elevation'):
-        multi_poly = unary_union(group.geometry)
-        grouped_polygons.append({'elevation': elevation, 'geometry': multi_poly})
-    
-    return gpd.GeoDataFrame(grouped_polygons)
+    # Объединение полигонов на одной высоте
+    final_df = gpd.GeoDataFrame(final_polygons, crs=df.crs)
+    grouped_polygons = [{'elevation': elevation, 'geometry': unary_union(group.geometry)} for elevation, group in final_df.groupby('elevation')]
+
+    return gpd.GeoDataFrame(grouped_polygons, crs=df.crs)
 
 if __name__ == '__main__':
     # Загрузка и валидация данных
@@ -83,6 +71,8 @@ if __name__ == '__main__':
     left_bottom_projected = prc.wgs84_point_to_crs(left_bottom, prc.MSK_48_CRS)
     right_top = (39.829939, 52.683001)
     right_top_projected = prc.wgs84_point_to_crs(right_top, prc.MSK_48_CRS)
+    
+    # Загрузка и фильтрация GeoJSON данных
     df_culled = prc.load_geojson('lipetsk_high.geojson', left_bottom, right_top)
     prc.validate_data(df_culled)
     
@@ -98,25 +88,28 @@ if __name__ == '__main__':
     # Преобразование данных обратно в WGS 84
     df_polygons_wgs84 = df_polygons.to_crs(epsg=4326)
 
-    # Сохранение результата
+    # Сохранение результата в файл GeoJSON
     df_polygons_wgs84.to_file('result.geojson', driver='GeoJSON')
 
-    # Визуализация
+    # Визуализация данных
     fig, axes = plt.subplots(1, 3, figsize=(15, 5))
 
+    # Исходные данные
     df_culled.plot(column='elevation', ax=axes[0], legend=True)
     axes[0].set_title('Исходные данные')
 
+    # Данные в проекции МСК-48
     df_projected.plot(column='elevation', ax=axes[1], legend=True)
     axes[1].set_title('Проекция данных в МСК-48')
 
+    # Полигоны из контуров
     df_polygons.plot(column='elevation', ax=axes[2], legend=True)
     axes[2].set_title('Полигоны из контуров')
 
     plt.tight_layout()
-    plt.show()   
+    plt.show()
 
-#тест: проверка result_polygons.geojson на карте, после прогона метода появится map.html, можно открыть его в браузере
+# Функция тестирования на карте
 def test_map():
     import folium
     import geopandas as gpd
@@ -134,6 +127,5 @@ def test_map():
         # Добавление GeoJSON на карту
         geojson.add_to(m)
 
-    # Отображение карты
+    # Сохранение карты в HTML файл
     m.save('map.html')
-
