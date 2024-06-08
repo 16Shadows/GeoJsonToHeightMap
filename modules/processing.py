@@ -101,8 +101,8 @@ def generate_height_map(terrain: geopandas.GeoDataFrame, sampling_grid: geopanda
     df_joined = cast(geopandas.GeoDataFrame, df_joined.groupby('point').head(1))
     #Отсортировать датафрейм обратно по индексу сэмплируемой точки, чтобы он был упорядоченным
     df_joined.sort_values('leftDownIndex', ascending=True, inplace=True)
-    #Удалить индекс фрейма terrain, который прикрепляется как right_index после sjoin
-    df_joined.drop(['right_index'], inplace=True)
+    #Удалить индекс фрейма terrain, который прикрепляется как index_right после sjoin
+    df_joined.drop(['index_right'], axis=1, inplace=True)
     return df_joined
 
 '''
