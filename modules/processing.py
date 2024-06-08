@@ -46,3 +46,25 @@ def generate_sampling_grid(leftTop: tuple[int, int], stepSize: int, columnCount:
     df.set_geometry('point', inplace=True)
     df.set_crs(crs, inplace=True)
     return df
+
+def generate_height_map(terrain: geopandas.GeoDataFrame, sampling_grid: geopandas.GeoDataFrame) -> geopandas.GeoDataFrame:
+    terrain_internal = terrain.copy()
+    terrain_internal['geometry'] = cast(geopandas.GeoSeries, terrain['geometry']).buffer(1)
+    df_joined : geopandas.GeoDataFrame = sampling_grid.sjoin(terrain_internal, how='left', predicate = 'within')
+    df_joined.sort_values('elevation', ascending=False, inplace=True)
+    df_joined = cast(geopandas.GeoDataFrame, df_joined.groupby('point').head(1))
+    df_joined.sort_values('leftDownIndex', ascending=True, inplace=True)
+    return df_joined
+
+def height_map_to_lists(heightMap: geopandas.GeoDataFrame) -> list[list[float]]:
+    out = []
+    curY = heightMap.iloc[0]['point'].y
+    curList : list[float] = []
+    for i, row in heightMap.iterrows():
+        if row['point'].y != curY:
+            out.append(curList)
+            curList = []
+            curY = row['point'].y
+        curList.append(row['elevation'])
+    out.append(curList)
+    return out
