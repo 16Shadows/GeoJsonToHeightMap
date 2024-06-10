@@ -89,7 +89,7 @@ if __name__ == '__main__':
     df_polygons_wgs84 = df_polygons.to_crs(epsg=4326)
 
     # Сохранение результата в файл GeoJSON
-    df_polygons_wgs84.to_file('result.geojson', driver='GeoJSON')
+    df_polygons_wgs84.to_file('contours.geojson', driver='GeoJSON')
 
     # Визуализация данных
     fig, axes = plt.subplots(1, 3, figsize=(15, 5))
