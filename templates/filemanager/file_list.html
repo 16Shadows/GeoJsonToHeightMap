@@ -11,7 +11,7 @@
 <ul>
   {% for file in files %}
     <li>
-      <a href="{% url 'filemanager:map_view' file.id %}">{{ file.file.name }}</a> ({{ file.uploaded_at }})
+      <a href="{% url 'filemanager:map_line_view' file.id %}">{{ file.file.name }}</a> ({{ file.uploaded_at }})
     </li>
   {% endfor %}
 </ul>

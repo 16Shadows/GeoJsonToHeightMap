@@ -1,0 +1,38 @@
+
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}User Details{% endblock title %}
+
+{% block breadcrumb %}
+Карта
+{% endblock breadcrumb %}
+
+{% block content %}
+<html>
+<head>
+    <title>Карта</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+</head>
+<body>
+    <h1>Результат в полигонах</h1>
+    <div id="plotly-container">{{ plotly_data|safe }}</div>
+    <div id="loader" style="display: block;">
+        <p>Загрузка...</p>
+    </div>
+
+    <script>
+        // Здесь вместо данных plotly_data должны быть данные, которые вы хотите загрузить
+        // Сейчас они загружены прямо в шаблон, но вы можете изменить это, чтобы данные загружались асинхронно
+
+        // Скрыть надпись "Загрузка..." после загрузки страницы
+        window.addEventListener('DOMContentLoaded', (event) => {
+            document.getElementById('loader').style.display = 'none';
+        });
+    </script>
+</body>
+</html>
+{% endblock content %}<!DOCTYPE html>

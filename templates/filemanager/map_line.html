@@ -1,0 +1,34 @@
+
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}User Details{% endblock title %}
+
+{% block breadcrumb %}
+Карта
+{% endblock breadcrumb %}
+
+{% block content %}
+<html>
+<head>
+    <title>Карта</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+</head>
+<body>
+    <h1 style="display: flex; justify-content: space-between;">
+        <div style="text-align: left; margin-left: 50px;">Первичный GeoJSON из линий</div>
+        <div style="text-align: right; margin-right: 50px;">GeoJSON в EPSG:3857 из МСК</div>
+    </h1>
+
+    <div style="display: flex;">
+        <div style="flex-grow: 0.58;"> {{ plotly_data|safe }} </div>
+        <img src="{% static 'images/map_m.png' %}" alt="Map Image" style="margin-left: auto;">
+    </div>
+
+    <a href="{% url 'filemanager:map_polygon_view' file_id %}" class="btn btn-primary">Преобразовать в полигоны</a>
+</body>
+</html>
+{% endblock content %}<!DOCTYPE html>
