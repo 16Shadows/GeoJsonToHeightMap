@@ -33,6 +33,54 @@
             document.getElementById('loader').style.display = 'none';
         });
     </script>
+
+    <!-- Сохранение карты высот -->
+    <button id="download-button" class="btn btn-primary">
+        Сохранить карту высот
+    </button>
+      
+    <div id="download-status">
+        <h6>Статус файла: <span id="download-status-value">...</span></h6>
+    </div>
+    <div id="download-time">
+        <h6>Время выполнения: <span id="download-time-value">...</span> сек.</h6>
+    </div>
+
+      <script>
+        let downloadTime = 0;
+        let downloadInterval = null;
+
+        document.getElementById('download-button').addEventListener('click', function() {
+            
+            document.getElementById('download-status-value').innerHTML = "Подготовка файла...";
+
+            // Обнуляем время выполнения и запускаем интервал
+            downloadTime = 0;
+            downloadInterval = setInterval(function() {
+            downloadTime++;
+            document.getElementById('download-time-value').innerHTML = downloadTime;
+            }, 1000);
+
+            fetch('{% url "filemanager:download_heightmap_file" file_id %}', {
+                method: 'GET',
+            })
+            .then(response => response.blob())
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = '{% url "filemanager:download_heightmap_file" file_id %}';
+                a.click();
+                window.URL.revokeObjectURL(url);
+
+                document.getElementById('download-status-value').innerHTML = "Файл готов. Скоро начнётся скачивание.";
+
+                // Останавливаем интервал
+                clearInterval(downloadInterval);
+            });
+        });
+      </script>
+
 </body>
 </html>
 {% endblock content %}<!DOCTYPE html>

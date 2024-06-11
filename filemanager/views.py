@@ -1,5 +1,6 @@
 import numpy as np
 import plotly
+from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from matplotlib import pyplot as plt
@@ -27,6 +28,63 @@ def upload_file(request):
     else:
         form = FileUploadForm()
     return render(request, 'filemanager/upload_file.html', {'form': form})
+
+#moduls/geojson_to_heightmap.py (author: https://github.com/16Shadows/GeoJsonToHeightMap/commits?author=KosmixGT)
+@login_required
+def download_heightmap_file(request, file_id):
+    uploaded_file = UploadedFile.objects.get(id=file_id, user=request.user)
+    uploaded_file_path = uploaded_file.file.path
+    heightmap_file_name = uploaded_file.file.name + "heightmap.txt"
+
+    left_bottom = (39.395158, 52.491465)
+    left_bottom_projected = prc.wgs84_point_to_crs(left_bottom, prc.MSK_48_CRS)
+    right_top = (39.829939, 52.683001)
+    right_top_projected = prc.wgs84_point_to_crs(right_top, prc.MSK_48_CRS)
+
+    # Загружаем и валидируем данные в заданной области
+    df_culled = load_geojson(uploaded_file_path, left_bottom, right_top)
+    validate_data(df_culled)
+
+    # Преобразуем контуры в полигоны и проецируем в систему координат MSK-48
+    df_projected = project_geometry(df_culled, prc.MSK_48_CRS)
+    df_polygons = cnt.contours_to_polygons(df_projected)
+
+    # Вычисляем размер сетки сэмплирования
+    step_size = 10  # Шаг сэмплирования (в метрах) - расстояние между точками сетки
+    column_count = 2000  # Количество столбцов в сетке
+    row_count = 2000  # Количество строк в сетке
+
+    # Генерируем сетку сэмплирования
+    sampling_grid = prc.generate_sampling_grid(
+        leftTop=(int(left_bottom_projected[0]), int(right_top_projected[1])),  # Координаты левого верхнего угла сетки
+        stepSize=step_size,  # Шаг сэмплирования (расстояние между точками)
+        columnCount=column_count,  # Количество столбцов в сетке
+        rowCount=row_count,  # Количество строк в сетке
+        crs=prc.MSK_48_CRS,  # Система координат сетки
+    )
+
+    # Присваиваем высоты точкам сетки
+    heightmap = prc.generate_height_map(df_polygons, sampling_grid)
+
+    # Получаем карту высот в виде списка списков
+    height_lists = prc.height_map_to_lists(heightmap)
+
+    # Запись полученных данных
+    heightmap_file = ""
+    heightmap_file += f"ncols {column_count}\n"
+    heightmap_file += f"nrows {row_count}\n"
+    heightmap_file += f"xllcorner {int(left_bottom_projected[0])}\n"
+    heightmap_file += f"yllcorner {int(left_bottom_projected[1])}\n"
+    heightmap_file += f"cellsize {step_size}\n"
+    heightmap_file += "NODATA_value -99999     Unit μg/m3\n"
+
+    for row in height_lists:
+        heightmap_file += ' '.join(map(str, row)) + '\n'
+
+    # Возвращаем файл в виде HttpResponse
+    response = HttpResponse(heightmap_file, content_type="text/plain")
+    response['Content-Disposition'] = f'attachment; filename="{heightmap_file_name}"'
+    return response
 
 
 @login_required
@@ -142,7 +200,8 @@ def map_polygon_view(request, file_id):
         fig.update_traces(hovertemplate='Высота: %{z} м')
         fig.update_layout(height=650,  # Устанавливаем высоту графика
                           margin={"t": 0, "l": 0, "b": 0})
-        return render(request, 'filemanager/map_polygon.html', {'plotly_data': fig.to_html(full_html=False)})
+        return render(request, 'filemanager/map_polygon.html', 
+                      {'plotly_data': fig.to_html(full_html=False), 'file_id': file_id})
     except Exception as e:
         return render(request, 'filemanager/map_polygon.html', {'error': str(e)})
 
