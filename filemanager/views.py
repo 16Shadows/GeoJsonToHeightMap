@@ -21,10 +21,14 @@ def upload_file(request):
     if request.method == 'POST':
         form = FileUploadForm(request.POST, request.FILES)
         if form.is_valid():
-            uploaded_file = form.save(commit=False)
-            uploaded_file.user = request.user
-            uploaded_file.save()
-            return redirect('filemanager:file_list')
+            uploaded_file = request.FILES['file']
+            if uploaded_file.name.endswith('.geojson'):
+                uploaded_file = form.save(commit=False)
+                uploaded_file.user = request.user
+                uploaded_file.save()
+                return redirect('filemanager:file_list')
+            else:
+                form.add_error('file', 'Загружаемый файл должеть иметь расширение ".geojson".')
     else:
         form = FileUploadForm()
     return render(request, 'filemanager/upload_file.html', {'form': form})
