@@ -58,7 +58,7 @@ def wgs84_point_to_crs(point: tuple[float, float], crs: str) -> tuple[float, flo
 '''
     Создаёт сетку для сэмплирования высот с указанными параметрами в системе координат с осью x направленной вправо, осью y направленной вверх.
     Аргументы:
-        leftTop : tuple[int, int] - левый верхний (в таком порядке компонентов) угол точки сэмплирования.
+        leftTop : tuple[int, int] - левый нижний (в таком порядке компонентов) угол точки сэмплирования.
         stepSize : int - шаг сетки сэмплирования (расстояние между точками сэмплирования)
         columnCount: int - число столбцов в создаваемой сетке сэмплирования
         rowCount: int - число строк в создаваемой сетке сэмплирования
@@ -69,7 +69,7 @@ def wgs84_point_to_crs(point: tuple[float, float], crs: str) -> tuple[float, flo
             'leftDownIndex' : int - индекс точки сэмплирования в направлении слева-направо, сверху-вниз.
                                     Точка в левом верхнем углу имеет индекс 0, в конце первой строки columnCount - 1, в начале второй строки columnCount, в правом нижнем углу - rowCount*columnCount-1
 '''
-def generate_sampling_grid(leftTop: tuple[int, int], stepSize: int, columnCount: int, rowCount: int, crs: str) -> geopandas.GeoDataFrame:
+def generate_sampling_grid(leftBottom: tuple[int, int], stepSize: int, columnCount: int, rowCount: int, crs: str) -> geopandas.GeoDataFrame:
     if columnCount < 1:
         raise ValueError('columnCount should be greater than 0')
     elif rowCount < 1:
@@ -78,8 +78,8 @@ def generate_sampling_grid(leftTop: tuple[int, int], stepSize: int, columnCount:
         raise ValueError('stepSize should be greater than 0')
 
     df = geopandas.GeoDataFrame({
-        'leftDownIndex': [x for x in range(rowCount * columnCount)],
-        'point': [shapely.Point(x, y) for y in range(leftTop[1] - stepSize//2, leftTop[1] - stepSize//2 - stepSize*rowCount, -stepSize) for x in range(leftTop[0] + stepSize//2, leftTop[0] + stepSize//2 + stepSize*columnCount, stepSize)]
+        'leftDownIndex': [y*columnCount+x for y in range(rowCount-1, -1, -1) for x in range(columnCount)],
+        'point': [shapely.Point(x, y) for y in range(leftBottom[1] + stepSize//2, leftBottom[1] + stepSize//2 + stepSize*rowCount, stepSize) for x in range(leftBottom[0] + stepSize//2, leftBottom[0] + stepSize//2 + stepSize*columnCount, stepSize)]
     })
     df.set_geometry('point', inplace=True)
     df.set_crs(crs, inplace=True)

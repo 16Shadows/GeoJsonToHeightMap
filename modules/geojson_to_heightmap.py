@@ -20,7 +20,7 @@ from processing import (
 
 if __name__ == "__main__":
     # Задаем координаты левого нижнего и правого верхнего углов области интереса
-    left_bottom = (39.395158, 52.491465)
+    left_bottom = (39.444032, 52.466341)
     left_bottom_projected = wgs84_point_to_crs(left_bottom, MSK_48_CRS)
     right_top = (39.829939, 52.683001)
     right_top_projected = wgs84_point_to_crs(right_top, MSK_48_CRS)
@@ -34,13 +34,13 @@ if __name__ == "__main__":
     df_polygons = contours_to_polygons(df_projected)
 
     # Вычисляем размер сетки сэмплирования
-    step_size = 10  # Шаг сэмплирования (в метрах) - расстояние между точками сетки
-    column_count = 2000  # Количество столбцов в сетке
-    row_count = 2000  # Количество строк в сетке
+    step_size = 200  # Шаг сэмплирования (в метрах) - расстояние между точками сетки
+    column_count = 130  # Количество столбцов в сетке
+    row_count = 101  # Количество строк в сетке
 
     # Генерируем сетку сэмплирования
     sampling_grid = generate_sampling_grid(
-        leftTop=(int(left_bottom_projected[0]), int(right_top_projected[1])),  # Координаты левого верхнего угла сетки
+        leftBottom=(int(left_bottom_projected[0]), int(left_bottom_projected[1])),  # Координаты левого верхнего угла сетки
         stepSize=step_size,  # Шаг сэмплирования (расстояние между точками)
         columnCount=column_count,  # Количество столбцов в сетке
         rowCount=row_count,  # Количество строк в сетке
@@ -54,7 +54,7 @@ if __name__ == "__main__":
     height_lists = height_map_to_lists(heightmap)
 
     # Открываем файл для записи
-    with open('heightmap.txt', 'w', encoding='utf-8') as file:
+    with open(f'heightmap_{step_size}m_{column_count}c_{row_count}r.txt', 'w', encoding='utf-8') as file:
         # Записываем метаданные
         file.write(f"ncols {column_count}\n")
         file.write(f"nrows {row_count}\n")

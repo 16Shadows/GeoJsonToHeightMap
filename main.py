@@ -35,7 +35,7 @@ if __name__ == '__main__':
     df_projected.set_geometry('geometry', inplace=True)
     df_projected.set_crs(prc.MSK_48_CRS, inplace=True)
 
-    sampling_grid = prc.generate_sampling_grid((0, 50), 5, 10, 10, crs=prc.MSK_48_CRS)
+    sampling_grid = prc.generate_sampling_grid((0, 0), 5, 10, 10, crs=prc.MSK_48_CRS)
     heightmap = prc.generate_height_map(df_projected, sampling_grid)
 
     fig, ax = plt.subplots(1, 1)
