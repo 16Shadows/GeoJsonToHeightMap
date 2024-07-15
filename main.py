@@ -1,47 +1,88 @@
-if __name__ == '__main__':
-    import matplotlib.pyplot as plt
-    import modules.processing as prc
-    import geopandas
-    import shapely
-    '''
-    left_bottom = (39.395158, 52.491465)
-    left_bottom_projected = prc.wgs84_point_to_crs(left_bottom, prc.MSK_48_CRS)
-    right_top = (39.829939, 52.683001)
-    right_top_projected = prc.wgs84_point_to_crs(right_top, prc.MSK_48_CRS)
-    df_culled = prc.load_geojson('lipetsk_high.geojson', left_bottom, right_top)
-    prc.validate_data(df_culled)
-    df_projected = prc.project_geometry(df_culled, prc.MSK_48_CRS)    
-    fig, axes = plt.subplots(2, 2)
+# Использование:
+# 1. Задайте нужную область, изменив координаты `left_bottom` и `right_top`.
+# 2. При необходимости, отрегулируйте шаг сэмплирования (`step_size`).
+# 3. Запустите скрипт.
+# 4. Результирующая карта высот будет сохранена в файл `heightmap_**.txt` в том же каталоге.
+
+import geopandas as gpd
+import matplotlib.pyplot as plt
+from modules.contours import contours_to_polygons
+from modules.processing import (
+    load_geojson,
+    validate_data,
+    project_geometry,
+    generate_sampling_grid,
+    generate_height_map,
+    MSK_48_CRS,
+    wgs84_point_to_crs,
+    height_map_to_lists,
+)
+
+if __name__ == "__main__":
+    # Параметры
+    right_top = (39.829939, 52.683001) #Координаты правого-верхнего угла
+    left_bottom = (39.444032, 52.466341) #Координаты левого-нижнего угла
+    geojson_file = "lipetsk_high.geojson"; #Путь до конвертируемого файла
+    step_size = 200  # Шаг сэмплирования (в метрах) - расстояние между точками сетки
+    column_count = 130  # Количество столбцов в сетке
+    row_count = 101  # Количество строк в сетке
+    target_crs = MSK_48_CRS # Координатная системая для семплирования
+    visualize = True
     
-    df_culled.plot(column='elevation', ax=axes[0][0], legend=True)
-    df_projected.plot(column='elevation', ax=axes[0][1], legend=True)
-    axes[1][0].set_xlim(left_bottom[0], right_top[0])
-    axes[1][0].set_ylim(left_bottom[1], right_top[1])
-    axes[1][1].set_xlim(left_bottom_projected[0], right_top_projected[0])
-    axes[1][1].set_ylim(left_bottom_projected[1], right_top_projected[1])
-    df_culled.plot(column='elevation', ax=axes[1][0], legend=True)
-    plt.show()
-    df_projected.plot(column='elevation', ax=axes[1][1], legend=True)
-    '''
-    df_lines = geopandas.GeoDataFrame({
-        "elevation": [15, 25],
-        "geometry": [shapely.LineString([[0, 0], [0, 50], [50, 50], [50, 0], [0, 0]]), shapely.LineString([[20, 20], [30, 30], [30, 10], [20, 20]])]
-    })
+    # Задаем координаты левого нижнего и правого верхнего углов области интереса
+    left_bottom_projected = wgs84_point_to_crs(left_bottom, target_crs)
+    right_top_projected = wgs84_point_to_crs(right_top, target_crs)
 
-    df_projected = geopandas.GeoDataFrame({
-        "elevation": [15, 25],
-        "geometry": [shapely.Polygon([[0, 0], [0, 50], [50, 50], [50, 0], [0, 0]], [[[20, 20], [30, 10], [30, 30], [20, 20]]]), shapely.Polygon([[20, 20], [30, 30], [30, 10], [20, 20]])]
-    })
-    df_projected.set_geometry('geometry', inplace=True)
-    df_projected.set_crs(prc.MSK_48_CRS, inplace=True)
+    # Загружаем и валидируем данные в заданной области
+    df_culled = load_geojson(geojson_file, left_bottom, right_top)
+    validate_data(df_culled)
 
-    sampling_grid = prc.generate_sampling_grid((0, 0), 5, 10, 10, crs=prc.MSK_48_CRS)
-    heightmap = prc.generate_height_map(df_projected, sampling_grid)
+    # Преобразуем контуры в полигоны и проецируем в целевую систему координат
+    df_projected = project_geometry(df_culled, target_crs)
+    df_polygons = contours_to_polygons(df_projected)
 
-    fig, ax = plt.subplots(1, 1)
-    df_lines.plot(column='elevation', ax=ax, legend=True)
-    heightmap.plot(column='elevation', ax=ax, legend=True)
+    # Генерируем сетку сэмплирования
+    sampling_grid = generate_sampling_grid(
+        leftBottom=(int(left_bottom_projected[0]), int(left_bottom_projected[1])),  # Координаты левого верхнего угла сетки
+        stepSize=step_size,  # Шаг сэмплирования (расстояние между точками)
+        columnCount=column_count,  # Количество столбцов в сетке
+        rowCount=row_count,  # Количество строк в сетке
+        crs=target_crs,  # Система координат сетки
+    )
 
-    print(prc.height_map_to_lists(heightmap))
+    # Присваиваем высоты точкам сетки
+    heightmap = generate_height_map(df_polygons, sampling_grid)
 
+    # Получаем карту высот в виде списка списков
+    height_lists = height_map_to_lists(heightmap)
+
+    # Открываем файл для записи
+    with open(f'heightmap_{step_size}m_{column_count}c_{row_count}r.txt', 'w', encoding='utf-8') as file:
+        # Записываем метаданные
+        file.write(f"ncols {column_count}\n")
+        file.write(f"nrows {row_count}\n")
+        file.write(f"xllcorner {int(left_bottom_projected[0])}\n")
+        file.write(f"yllcorner {int(left_bottom_projected[1])}\n")
+        file.write(f"cellsize {step_size}\n")
+        file.write("NODATA_value -99999     Unit μg/m3\n")
+
+        # Записываем данные карты высот
+        for row in height_lists:
+            file.write(' '.join(map(str, row)) + '\n')
+
+    # Визуализируем данные
+    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+
+    if visualize:
+        df_culled.plot(column="elevation", ax=axes[0], legend=True)
+        axes[0].set_title("Исходные данные")
+
+        df_polygons.plot(column="elevation", ax=axes[1], legend=True)
+        axes[1].set_title("Полигоны из контуров")
+
+        heightmap.plot(column="elevation", ax=axes[2], legend=True)
+        sampling_grid.boundary.plot(ax=axes[2], color='red', linewidth=0.5)  # Визуализация границ сетки сэмплирования
+        axes[2].set_title("Карта высот")
+
+    plt.tight_layout()
     plt.show()

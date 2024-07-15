@@ -2,7 +2,7 @@ import geopandas as gpd
 from shapely.geometry import Polygon, MultiPolygon, LineString
 from shapely.ops import unary_union
 import matplotlib.pyplot as plt
-import processing as prc
+import modules.processing as prc
 
 # Функция для преобразования контуров в полигоны
 def contours_to_polygons(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
